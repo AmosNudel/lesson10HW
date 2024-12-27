@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fullstack Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css')}}">
+        
+</head>
+<body>
+    <h1>CRUD App</h1>
+    <div id="add_data">
+        <input type="text" name="name_input" id="name_input" placeholder="Enter name">
+        <input type="number" name="age_input" id="age_input" placeholder="Enter Age">
+        <button onclick="addData()">Submit</button>
+    </div>
+    <div id="data-table">
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr>
+                    <td>{{ row.id }}</td>
+                    <td id="name-{{ row.id }}">{{ row.name }}</td>
+                    <td id="age-{{ row.id }}">{{ row.age }}</td>
+                    <td>
+                        <button onclick="editData({{ row.id }})">Edit</button>
+                        <button onclick="deleteData({{ row.id }})">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            
+        </table>
+    </div>
+    
+    
+
+    <script>
+    const addData = () => {
+    // Get values from input fields
+    const name = document.getElementById('name_input').value;
+    const age = document.getElementById('age_input').value;
+
+    // Create the data object
+    const data = {
+        name: name,
+        age: parseInt(age) // Convert age to a number
+    };
+
+    // Send POST request
+    axios.post('/add', data)
+        .then(response => {
+            console.log(response.data);
+            
+            // Clear the table
+            const tbody = document.querySelector('#data-table tbody');
+            tbody.innerHTML = '';
+
+            // Re-populate the table with updated data
+            response.data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.id}</td>
+                    <td id="name-${row.id}">${row.name}</td>
+                    <td id="age-${row.id}">${row.age}</td>
+                    <td>
+                        <button onclick="editData(${row.id})">Edit</button>
+                        <button onclick="deleteData(${row.id})">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Clear input fields
+            document.getElementById('name_input').value = '';
+            document.getElementById('age_input').value = '';
+        })
+        .catch(error => console.error('Error:', error));
+};
+
+
+const deleteData=(id)=> {
+    // Confirm before deleting
+    if (!confirm(`Are you sure you want to delete the entry with ID ${id}?`)) {
+        return;
+    }
+
+    // Send DELETE request
+    axios.delete(`/delete/${id}`)
+        .then(response => {
+            console.log(response.data);
+            
+            // Remove the deleted row from the table
+            const tbody = document.querySelector('#data-table tbody');
+            const rows = Array.from(tbody.rows);
+            rows.forEach(row => {
+                if (parseInt(row.cells[0].innerText) === id) {
+                    row.remove(); // Remove the row from the DOM
+                }
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete the entry. Please try again.');
+        });
+}
+
+const editData=(id)=> {
+    // Get current values from the table
+    const name = document.getElementById(`name-${id}`).innerText;
+    const age = document.getElementById(`age-${id}`).innerText;
+
+    // Prompt the user to enter new values
+    const newName = prompt('Enter new name:', name);
+    const newAge = prompt('Enter new age:', age);
+
+    // Validate input
+    if (newName && newAge) {
+        updateData(id, newName, parseInt(newAge));
+    }
+}
+
+const updateData=(id, name, age)=> {
+    // Create the updated data object
+    const updatedData = { name: name, age: age };
+
+    // Send PUT request to update the entry
+    axios.put(`/update/${id}`, updatedData)
+        .then(response => {
+            console.log(response.data);
+
+            // Update the table in the DOM
+            document.getElementById(`name-${id}`).innerText = name;
+            document.getElementById(`age-${id}`).innerText = age;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to update the entry. Please try again.');
+        });
+}
+
+</script>
+        
+</body>
+</html>
